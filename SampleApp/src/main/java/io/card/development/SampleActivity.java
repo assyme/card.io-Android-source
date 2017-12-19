@@ -145,6 +145,12 @@ public class SampleActivity extends Activity {
         autotestMode = true;
     }
 
+    public void OnFragmentTest(View view){
+        Log.i(TAG, "Spawn test area for our fragment");
+        Intent intent = new Intent(this, Embed.class);
+        startActivity(intent);
+    }
+
     @Override
     public void onStop() {
         super.onStop();
