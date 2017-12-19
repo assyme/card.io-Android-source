@@ -12,6 +12,10 @@ repositories {
     maven {
         url "https://jitpack.io"
     }
+    maven {
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
 }
 
 apply plugin: 'com.android.application'
@@ -54,7 +58,7 @@ dependencies {
     }
 
     debugCompile 'com.squareup.leakcanary:leakcanary-android:1.4'
-
-    androidTestCompile "com.android.support.test.espresso:espresso-core:2.2.2"
+    compile 'com.android.support.constraint:constraint-layout:1.1.0-beta3'
+    androidTestCompile "com.android.support.test.espresso:espresso-core:3.0.1"
     androidTestCompile "com.github.lkorth:device-automator:01d85912ec"
 }

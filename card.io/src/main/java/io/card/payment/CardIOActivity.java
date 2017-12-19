@@ -7,6 +7,7 @@ package io.card.payment;
 import android.Manifest;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -28,6 +29,7 @@ import android.view.LayoutInflater;
 import android.view.OrientationEventListener;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
 import android.view.WindowManager;
@@ -55,7 +57,7 @@ import io.card.payment.ui.ViewUtil;
  *
  * @version 1.0
  */
-public final class CardIOActivity extends Activity {
+public final class CardIOActivity extends Fragment {
     /**
      * Boolean extra. Optional. Defaults to <code>false</code>. If set, the card will not be scanned
      * with the camera.
@@ -292,7 +294,7 @@ public final class CardIOActivity extends Activity {
     private Rect mGuideFrame;
     private int mLastDegrees;
     private int mFrameOrientation;
-    private boolean suppressManualEntry;
+    private boolean suppressManualEntry = true;
     private boolean mDetectOnly;
     private LinearLayout customOverlayLayout;
     private boolean waitingForPermission;
@@ -321,13 +323,13 @@ public final class CardIOActivity extends Activity {
     // ------------------------------------------------------------------------
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         final Intent clientData = this.getIntent();
 
         useApplicationTheme = getIntent().getBooleanExtra(CardIOActivity.EXTRA_KEEP_APPLICATION_THEME, false);
-        ActivityHelper.setActivityTheme(this, useApplicationTheme);
+        ActivityHelper.setActivityTheme(this.getActivity(), useApplicationTheme);
 
         LocalizedStrings.setLanguage(clientData);
 
@@ -340,15 +342,15 @@ public final class CardIOActivity extends Activity {
         // Check for DataEntryActivity's portrait orientation
 
         // Check for CardIOActivity's orientation config in manifest
-        resolveInfo = getPackageManager().resolveActivity(clientData,
+        /*resolveInfo = this.getActivity().getPackageManager().resolveActivity(clientData,
                 PackageManager.MATCH_DEFAULT_ONLY);
         errorMsg = Util.manifestHasConfigChange(resolveInfo, CardIOActivity.class);
         if (errorMsg != null) {
             throw new RuntimeException(errorMsg); // Throw the actual exception from this class, for
             // clarity.
-        }
+        }*/
 
-        suppressManualEntry = clientData.getBooleanExtra(EXTRA_SUPPRESS_MANUAL_ENTRY, false);
+        suppressManualEntry = true; //clientData.getBooleanExtra(EXTRA_SUPPRESS_MANUAL_ENTRY, false);
 
 
         if (savedInstanceState != null) {
@@ -363,7 +365,7 @@ public final class CardIOActivity extends Activity {
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                     if (!waitingForPermission) {
-                        if (checkSelfPermission(Manifest.permission.CAMERA) ==
+                        if (this.getActivity().checkSelfPermission(Manifest.permission.CAMERA) ==
                                 PackageManager.PERMISSION_DENIED) {
                             String[] permissions = {Manifest.permission.CAMERA};
                             waitingForPermission = true;
@@ -384,6 +386,13 @@ public final class CardIOActivity extends Activity {
 
     }
 
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        super.onCreateView(inflater, container, savedInstanceState);
+        return mMainLayout;
+    }
+
+
     private void android23AndAboveHandleCamera() {
         if (manualEntryFallbackOrForced) {
             finishIfSuppressManualEntry();
@@ -399,8 +408,7 @@ public final class CardIOActivity extends Activity {
             finishIfSuppressManualEntry();
         } else {
             // guaranteed to be called in onCreate on API < 22, so it's ok that we're removing the window feature here
-            requestWindowFeature(Window.FEATURE_NO_TITLE);
-
+            this.getActivity().requestWindowFeature(Window.FEATURE_NO_TITLE);
             showCameraScannerOverlay();
         }
     }
@@ -424,7 +432,7 @@ public final class CardIOActivity extends Activity {
             String localizedError = LocalizedStrings.getString(errorKey);
 
             Log.e(Util.PUBLIC_LOG_TAG, errorKey + ": " + localizedError);
-            Toast toast = Toast.makeText(this, localizedError, Toast.LENGTH_LONG);
+            Toast toast = Toast.makeText(this.getActivity(), localizedError, Toast.LENGTH_LONG);
             toast.setGravity(Gravity.CENTER, 0, TOAST_OFFSET_Y);
             toast.show();
             manualEntryFallbackOrForced = true;
@@ -433,13 +441,13 @@ public final class CardIOActivity extends Activity {
 
     private void showCameraScannerOverlay() {
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            View decorView = getWindow().getDecorView();
+            View decorView = this.getActivity().getWindow().getDecorView();
             // Hide the status bar.
             int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
             decorView.setSystemUiVisibility(uiOptions);
             // Remember that you should never show the action bar if the
             // status bar is hidden, so hide that too if necessary.
-            ActionBar actionBar = getActionBar();
+            ActionBar actionBar = this.getActivity().getActionBar();
             if (null != actionBar) {
                 actionBar.hide();
             }
@@ -451,7 +459,7 @@ public final class CardIOActivity extends Activity {
             mFrameOrientation = ORIENTATION_PORTRAIT;
 
             if (getIntent().getBooleanExtra(PRIVATE_EXTRA_CAMERA_BYPASS_TEST_MODE, false)) {
-                if (!this.getPackageName().contentEquals("io.card.development")) {
+                if (!this.getActivity().getPackageName().contentEquals("io.card.development")) {
                     throw new IllegalStateException("Illegal access of private extra");
                 }
                 // use reflection here so that the tester can be safely stripped for release
@@ -462,13 +470,13 @@ public final class CardIOActivity extends Activity {
                 mCardScanner = (CardScanner) cons.newInstance(new Object[] { this,
                         mFrameOrientation });
             } else {
-                mCardScanner = new CardScanner(this, mFrameOrientation);
+                mCardScanner = new CardScanner(this.getActivity(), mFrameOrientation, this);
             }
             mCardScanner.prepareScanner();
 
             setPreviewLayout();
 
-            orientationListener = new OrientationEventListener(this,
+            orientationListener = new OrientationEventListener(this.getActivity(),
                     SensorManager.SENSOR_DELAY_UI) {
                 @Override
                 public void onOrientationChanged(int orientation) {
@@ -486,7 +494,7 @@ public final class CardIOActivity extends Activity {
         String localizedError = LocalizedStrings.getString(errorKey);
 
         Log.e(Util.PUBLIC_LOG_TAG, "Unknown exception, please post the stack trace as a GitHub issue", e);
-        Toast toast = Toast.makeText(this, localizedError, Toast.LENGTH_LONG);
+        Toast toast = Toast.makeText(this.getActivity(), localizedError, Toast.LENGTH_LONG);
         toast.setGravity(Gravity.CENTER, 0, TOAST_OFFSET_Y);
         toast.show();
         manualEntryFallbackOrForced = true;
@@ -539,7 +547,7 @@ public final class CardIOActivity extends Activity {
      * same buffer for preview callbacks to greatly reduce the amount of required GC).
      */
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
 
         if (!waitingForPermission) {
@@ -557,9 +565,9 @@ public final class CardIOActivity extends Activity {
 
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            ActivityHelper.setFlagSecure(this);
+            ActivityHelper.setFlagSecure(this.getActivity());
 
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            this.getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
             orientationListener.enable();
 
             if (!restartPreview()) {
@@ -576,14 +584,14 @@ public final class CardIOActivity extends Activity {
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
         outState.putBoolean(BUNDLE_WAITING_FOR_PERMISSION, waitingForPermission);
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
 
         if (orientationListener != null) {
@@ -597,7 +605,7 @@ public final class CardIOActivity extends Activity {
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         mOverlay = null;
 
         if (orientationListener != null) {
@@ -628,7 +636,7 @@ public final class CardIOActivity extends Activity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == DATA_ENTRY_REQUEST_ID) {
@@ -649,7 +657,7 @@ public final class CardIOActivity extends Activity {
      * <br><br>
      * This method is called by Android, never directly by application code.
      */
-    @Override
+    /*@Override
     public void onBackPressed() {
         if (!manualEntryFallbackOrForced && mOverlay.isAnimating()) {
             try {
@@ -660,7 +668,7 @@ public final class CardIOActivity extends Activity {
         } else if (mCardScanner != null) {
             super.onBackPressed();
         }
-    }
+    }*/
 
     // ------------------------------------------------------------------------
     // STATIC METHODS
@@ -739,7 +747,7 @@ public final class CardIOActivity extends Activity {
 
     void onCardDetected(Bitmap detectedBitmap, DetectionInfo dInfo) {
         try {
-            Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            Vibrator vibrator = (Vibrator) this.getActivity().getSystemService(Context.VIBRATOR_SERVICE);
             vibrator.vibrate(VIBRATE_PATTERN, -1);
         } catch (SecurityException e) {
             Log.e(Util.PUBLIC_LOG_TAG,
@@ -784,7 +792,7 @@ public final class CardIOActivity extends Activity {
     private void nextActivity() {
         final Intent origIntent = getIntent();
         if (origIntent != null && origIntent.getBooleanExtra(EXTRA_SUPPRESS_CONFIRMATION, false)) {
-            Intent dataIntent = new Intent(CardIOActivity.this, DataEntryActivity.class);
+            Intent dataIntent = new Intent(CardIOActivity.this.getActivity(), DataEntryActivity.class);
             if (mDetectedCard != null) {
                 dataIntent.putExtra(EXTRA_SCAN_RESULT, mDetectedCard);
                 mDetectedCard = null;
@@ -800,7 +808,7 @@ public final class CardIOActivity extends Activity {
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
-                    Intent dataIntent = new Intent(CardIOActivity.this, DataEntryActivity.class);
+                    Intent dataIntent = new Intent(CardIOActivity.this.getActivity(), DataEntryActivity.class);
                     Util.writeCapturedCardImageIfNecessary(origIntent, dataIntent, mOverlay);
 
                     if (mOverlay != null) {
@@ -839,7 +847,7 @@ public final class CardIOActivity extends Activity {
      */
     private void showErrorMessage(final String msgStr) {
         Log.e(Util.PUBLIC_LOG_TAG, "error display: " + msgStr);
-        Toast toast = Toast.makeText(CardIOActivity.this, msgStr, Toast.LENGTH_LONG);
+        Toast toast = Toast.makeText(CardIOActivity.this.getActivity(), msgStr, Toast.LENGTH_LONG);
         toast.show();
     }
 
@@ -895,20 +903,20 @@ public final class CardIOActivity extends Activity {
     private void setPreviewLayout() {
 
         // top level container
-        mMainLayout = new FrameLayout(this);
-        mMainLayout.setBackgroundColor(Color.BLACK);
+        mMainLayout = new FrameLayout(this.getActivity());
+        //mMainLayout.setBackgroundColor(Color.BLACK);
         mMainLayout.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT));
 
-        FrameLayout previewFrame = new FrameLayout(this);
+        FrameLayout previewFrame = new FrameLayout(this.getActivity());
         previewFrame.setId(FRAME_ID);
 
-        mPreview = new Preview(this, null, mCardScanner.mPreviewWidth, mCardScanner.mPreviewHeight);
+        mPreview = new Preview(this.getActivity(), null, mCardScanner.mPreviewWidth, mCardScanner.mPreviewHeight);
         mPreview.setLayoutParams(new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT, Gravity.TOP));
         previewFrame.addView(mPreview);
 
-        mOverlay = new OverlayView(this, null, Util.deviceSupportsTorch(this));
+        mOverlay = new OverlayView(this.getActivity(), null, Util.deviceSupportsTorch(this.getActivity()), this);
         mOverlay.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT));
         if (getIntent() != null) {
@@ -944,7 +952,7 @@ public final class CardIOActivity extends Activity {
         previewParams.addRule(RelativeLayout.ABOVE, UIBAR_ID);
         mMainLayout.addView(previewFrame, previewParams);
 
-        mUIBar = new RelativeLayout(this);
+        mUIBar = new RelativeLayout(this.getActivity());
         mUIBar.setGravity(Gravity.BOTTOM);
         RelativeLayout.LayoutParams mUIBarParams = new RelativeLayout.LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
@@ -957,7 +965,7 @@ public final class CardIOActivity extends Activity {
 
         // Show the keyboard button
         if (!suppressManualEntry) {
-            Button keyboardBtn = new Button(this);
+            Button keyboardBtn = new Button(this.getActivity());
             keyboardBtn.setId(KEY_BTN_ID);
             keyboardBtn.setText(LocalizedStrings.getString(StringKey.KEYBOARD));
             keyboardBtn.setOnClickListener(new Button.OnClickListener() {
@@ -967,12 +975,12 @@ public final class CardIOActivity extends Activity {
                 }
             });
             mUIBar.addView(keyboardBtn);
-            ViewUtil.styleAsButton(keyboardBtn, false, this, useApplicationTheme);
+            ViewUtil.styleAsButton(keyboardBtn, false, this.getActivity(), useApplicationTheme);
             if(!useApplicationTheme){
                 keyboardBtn.setTextSize(Appearance.TEXT_SIZE_SMALL_BUTTON);
             }
             keyboardBtn.setMinimumHeight(ViewUtil.typedDimensionValueToPixelsInt(
-                    Appearance.SMALL_BUTTON_HEIGHT, this));
+                    Appearance.SMALL_BUTTON_HEIGHT, this.getActivity()));
             RelativeLayout.LayoutParams keyboardParams = (RelativeLayout.LayoutParams) keyboardBtn
                     .getLayoutParams();
             keyboardParams.width = LayoutParams.WRAP_CONTENT;
@@ -985,13 +993,13 @@ public final class CardIOActivity extends Activity {
 
         }
         // Device has a flash, show the flash button
-        RelativeLayout.LayoutParams uiParams = new RelativeLayout.LayoutParams(
-                LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-        uiParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        final float scale = getResources().getDisplayMetrics().density;
-        int uiBarMarginPx = (int) (UIBAR_VERTICAL_MARGIN_DP * scale + 0.5f);
-        uiParams.setMargins(0, uiBarMarginPx, 0, uiBarMarginPx);
-        mMainLayout.addView(mUIBar, uiParams);
+        /*RelativeLayout.LayoutParams uiParams = new RelativeLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);*/
+        //uiParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        //final float scale = getResources().getDisplayMetrics().density;
+        //int uiBarMarginPx = (int) (UIBAR_VERTICAL_MARGIN_DP * scale + 0.5f);
+        //uiParams.setMargins(0, uiBarMarginPx, 0, uiBarMarginPx);
+        //mMainLayout.addView(mUIBar, uiParams);
 
         if (getIntent() != null) {
             if (customOverlayLayout != null) {
@@ -1001,18 +1009,17 @@ public final class CardIOActivity extends Activity {
 
             int resourceId = getIntent().getIntExtra(EXTRA_SCAN_OVERLAY_LAYOUT_ID, -1);
             if (resourceId != -1) {
-                customOverlayLayout = new LinearLayout(this);
+                customOverlayLayout = new LinearLayout(this.getActivity());
                 customOverlayLayout.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                         LayoutParams.MATCH_PARENT));
 
-                LayoutInflater inflater = this.getLayoutInflater();
+                LayoutInflater inflater = this.getActivity().getLayoutInflater();
 
                 inflater.inflate(resourceId, customOverlayLayout);
                 mMainLayout.addView(customOverlayLayout);
             }
         }
-
-        this.setContentView(mMainLayout);
+        //this.setContentView(mMainLayout);
     }
 
     private void rotateCustomOverlay(float degrees) {
@@ -1030,9 +1037,9 @@ public final class CardIOActivity extends Activity {
     }
 
     private void setResultAndFinish(final int resultCode, final Intent data) {
-        setResult(resultCode, data);
+        this.getActivity().setResult(resultCode, data);
         markedCardImage = null;
-        finish();
+        this.getActivity().finish();
     }
 
     // for torch test
@@ -1043,4 +1050,11 @@ public final class CardIOActivity extends Activity {
         return mOverlay.getTorchRect();
     }
 
+    public Intent getIntent() {
+        return this.getActivity().getIntent();
+    }
+
+    public Window getWindow() {
+        return this.getActivity().getWindow();
+    }
 }

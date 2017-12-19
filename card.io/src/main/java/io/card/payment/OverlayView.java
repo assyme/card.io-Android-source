@@ -4,6 +4,9 @@ package io.card.payment;
  * See the file "LICENSE.md" for the full license governing this code.
  */
 
+import android.app.Activity;
+import android.app.Fragment;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -87,7 +90,8 @@ class OverlayView extends View {
 
     private static final int BUTTON_TOUCH_TOLERANCE = 20;
 
-    private final WeakReference<CardIOActivity> mScanActivityRef;
+    private final WeakReference<Activity> mScanActivityRef;
+    private final CardIOActivity mParentFragment;
     private DetectionInfo mDInfo;
     private Bitmap mBitmap;
     GradientDrawable mScanLineDrawable;
@@ -113,11 +117,12 @@ class OverlayView extends View {
     private int mRotationFlip;
     private float mScale = 1;
 
-    public OverlayView(CardIOActivity captureActivity, AttributeSet attributeSet, boolean showTorch) {
+    public OverlayView(Activity captureActivity, AttributeSet attributeSet, boolean showTorch, CardIOActivity parentFragment ) {
         super(captureActivity, attributeSet);
 
         mShowTorch = showTorch;
-        mScanActivityRef = new WeakReference<CardIOActivity>(captureActivity);
+        mScanActivityRef = new WeakReference<Activity>(captureActivity);
+        mParentFragment = parentFragment;
 
         mRotationFlip = 1;
 
@@ -396,9 +401,9 @@ class OverlayView extends View {
                 Point p = new Point((int) event.getX(), (int) event.getY());
                 Rect r = Util.rectGivenCenter(p, BUTTON_TOUCH_TOLERANCE, BUTTON_TOUCH_TOLERANCE);
                 if (mShowTorch && mTorchRect != null && Rect.intersects(mTorchRect, r)) {
-                    mScanActivityRef.get().toggleFlash();
+                    mParentFragment.toggleFlash();
                 } else {
-                    mScanActivityRef.get().triggerAutoFocus();
+                    mParentFragment.triggerAutoFocus();
                 }
             }
         } catch (NullPointerException e) {

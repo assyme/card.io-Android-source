@@ -4,6 +4,7 @@ package io.card.payment;
  * See the file "LICENSE.md" for the full license governing this code.
  */
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -189,7 +190,7 @@ class CardScanner implements Camera.PreviewCallback, Camera.AutoFocusCallback,
         return (!manualFallbackForError && (usesSupportedProcessorArch()));
     }
 
-    CardScanner(CardIOActivity scanActivity, int currentFrameOrientation) {
+    CardScanner(Activity scanActivity, int currentFrameOrientation, CardIOActivity mParentFragment) {
         Intent scanIntent = scanActivity.getIntent();
         if (scanIntent != null) {
             mSuppressScan = scanIntent.getBooleanExtra(CardIOActivity.EXTRA_SUPPRESS_SCAN, false);
@@ -197,7 +198,7 @@ class CardScanner implements Camera.PreviewCallback, Camera.AutoFocusCallback,
                     && scanIntent.getBooleanExtra(CardIOActivity.EXTRA_SCAN_EXPIRY, true);
             mUnblurDigits = scanIntent.getIntExtra(CardIOActivity.EXTRA_UNBLUR_DIGITS, DEFAULT_UNBLUR_DIGITS);
         }
-        mScanActivityRef = new WeakReference<>(scanActivity);
+        mScanActivityRef = new WeakReference<>(mParentFragment);
         mFrameOrientation = currentFrameOrientation;
         nSetup(mSuppressScan, MIN_FOCUS_SCORE, mUnblurDigits);
     }
@@ -625,7 +626,7 @@ class CardScanner implements Camera.PreviewCallback, Camera.AutoFocusCallback,
     int getRotationalOffset() {
         final int rotationOffset;
         // Check "normal" screen orientation and adjust accordingly
-        int naturalOrientation = ((WindowManager) mScanActivityRef.get().getSystemService(Context.WINDOW_SERVICE))
+        int naturalOrientation = ((WindowManager) mScanActivityRef.get().getActivity().getSystemService(Context.WINDOW_SERVICE))
                 .getDefaultDisplay().getRotation();
         if (naturalOrientation == Surface.ROTATION_0) {
             rotationOffset = 0;

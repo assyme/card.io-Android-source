@@ -119,7 +119,6 @@ public class ViewUtil {
      * @param top
      * @param right
      * @param bottom
-     * @category layout
      */
     public static void setMargins(View view, String left, String top, String right, String bottom) {
         Context context = view.getContext();

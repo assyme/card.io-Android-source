@@ -1,10 +1,14 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
-apply plugin: 'signing'
+
 apply plugin: 'io.codearte.nexus-staging'
 
 repositories {
     mavenCentral()
+    maven {
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
 }
 
 android {
@@ -36,6 +40,7 @@ android {
 dependencies {
     testCompile "junit:junit:4.12"
     testCompile "org.robolectric:robolectric:3.1.2"
+
 }
 
 task javadocs(type: Javadoc) {
@@ -71,10 +76,13 @@ artifacts {
     archives javadocsJar
     archives sourcesJar
 }
-
-signing {
-    sign configurations.archives
+if (project.hasProperty("signing.keyId")){
+    apply plugin: 'signing'
+    signing {
+        sign configurations.archives
+    }
 }
+
 
 
 def sonatypeUsername = System.env['SONATYPE_USERNAME']

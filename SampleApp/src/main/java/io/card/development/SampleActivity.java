@@ -103,7 +103,7 @@ public class SampleActivity extends Activity {
     }
 
     public void onScan(View pressed) {
-        Intent intent = new Intent(this, CardIOActivity.class)
+        Intent intent = new Intent(this, EmbedActivity.class)
                 .putExtra(CardIOActivity.EXTRA_NO_CAMERA, mManualToggle.isChecked())
                 .putExtra(CardIOActivity.EXTRA_REQUIRE_EXPIRY, mEnableExpiryToggle.isChecked())
                 .putExtra(CardIOActivity.EXTRA_SCAN_EXPIRY, mScanExpiryToggle.isChecked())
@@ -119,7 +119,8 @@ public class SampleActivity extends Activity {
                 .putExtra(CardIOActivity.EXTRA_GUIDE_COLOR, Color.GREEN)
                 .putExtra(CardIOActivity.EXTRA_SUPPRESS_CONFIRMATION, mSuppressConfirmationToggle.isChecked())
                 .putExtra(CardIOActivity.EXTRA_SUPPRESS_SCAN, mSuppressScanToggle.isChecked())
-                .putExtra(CardIOActivity.EXTRA_RETURN_CARD_IMAGE, true);
+                .putExtra(CardIOActivity.EXTRA_RETURN_CARD_IMAGE, true)
+                .putExtra(CardIOActivity.EXTRA_HIDE_CARDIO_LOGO, true);
 
         try {
             int unblurDigits = Integer.parseInt(mUnblurEdit.getText().toString());

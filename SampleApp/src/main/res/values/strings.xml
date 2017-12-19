@@ -1,0 +1,4 @@
+<resources>
+    <string name="position_card_helper_message">Position the card and scan it.</string>
+    <string name="add_manually">Add manually</string>
+</resources>
